@@ -1,13 +1,14 @@
 #include "matrix.h"
 
-static int mat_capacity;
+static int mat_capacity = 512;
 static int mat_index = 0;
 static double ***matrix;
 static size_t *width;
 static size_t *height;
 
 void init_matrices(size_t capacity) {
-	mat_capacity = capacity;
+	if(capacity > mat_capacity)
+		mat_capacity = capacity;
 	matrix = calloc(mat_capacity, sizeof(double**));
 	width = calloc(mat_capacity, sizeof(size_t));
 	height = calloc(mat_capacity, sizeof(size_t));
@@ -24,7 +25,14 @@ int push_matrix(size_t w, size_t h, double mat[h][w]) {
 			matrix[mat_index][i][j] = mat[i][j];
 		}
 	}
-	return mat_index++;
+	if(++mat_index > mat_capacity) {
+		matrix = realloc(matrix, (mat_capacity *= 2) * sizeof(double**));
+	}
+	return mat_index - 1;
+}
+
+double **get_matrix(int index) {
+	return matrix[index];
 }
 
 void print_matrix(int index) {
@@ -36,10 +44,11 @@ void print_matrix(int index) {
 		}
 		printf("\b\b]\n");
 	}
+	printf("\n");
 }
 
 void clear_matrices() {
-	int k, i, j;
+	int k, i;
 	for(k = 0; k < mat_capacity; ++k) {
 		for(i = 0; i < height[k]; ++i) {
 			free(matrix[k][i]);		
@@ -69,4 +78,106 @@ int multiply_matrices(int a, int b) {
 		}
 	}
 	return push_matrix(width[b], height[a], ab);
+}
+
+//TODO: adding, subtracting, inverse, rref, rank, gauss-jordan, solving systems, Row, Column, Null, LeftNull, SVD
+int add_matrices(int a, int b) {
+	if(width[a] != width[b] || height[a] != height[b]) {
+		printf("matrices cannot be added.\n");
+		return -1;
+	}
+	double ab[height[a]][width[a]];
+	int i, j;
+	for(i = 0; i < height[a]; ++i) {
+		for(j = 0; j < width[a]; ++j) {
+			ab[i][j] = matrix[a][i][j] + matrix[b][i][j];
+		}
+	}
+	return push_matrix(width[a], height[a], ab);
+}
+
+int subtract_matrices(int a, int b) {
+	if(width[a] != width[b] || height[a] != height[b]) {
+		printf("matrices cannot be subtracted.\n");
+		return -1;
+	}
+	double ab[height[a]][width[a]];
+	int i, j;
+	for(i = 0; i < height[a]; ++i) {
+		for(j = 0; j < width[a]; ++j) {
+			ab[i][j] = matrix[a][i][j] - matrix[b][i][j];
+		}
+	}
+	return push_matrix(width[a], height[a], ab);
+}
+
+int multiply_scalar(double k, int a) {
+	double ka[height[a]][width[a]];	
+	int i, j;
+	for(i = 0; i < height[a]; ++i) {
+		for(j = 0; j < width[a]; ++j) {
+			ka[i][j] = k * matrix[a][i][j];
+		}
+	}
+	return push_matrix(width[a], height[a], ka);
+}
+
+int rref(int a) {
+	int i, j;	
+	double arref[height[a]][width[a]];
+	for(i = 0; i < height[a]; ++i) {
+		memcpy(arref[i], matrix[a][i], sizeof(arref[i]));
+	}
+
+	//to speed up computation and save stack space we're gonna use a fucktonne of memcpy's for swapping, etc.
+	//instead of multiplying by elementary matrices, etc.
+
+	for(i = 0, j = 0; i < height[a]-1 && j < width[a]-1; ++i, ++j) {
+		//terminology: i = current row, j = LEADING column
+
+		//if leading coefficient is zero, then swap with a nonzero row
+		if(arref[i][j] == 0) {
+			int k;
+			for(k = i; k < height[a]; ++k) {
+				//if we found a row with nonzero leading coefficient, then this is the row we want to swap with.
+				if(arref[k][j] != 0)
+					break;
+			}
+			if(arref[k][j] != 0) {
+				//swap row[i] with row[k]
+				//NOTE: do not use matrix[a]! use arref! must be nondestructive!
+				//NOTE: this could also be done with multiplication via elementary matrices but uh ... no.
+				double rowi[width[a]];
+				memcpy(rowi, arref[i], sizeof(rowi));
+				memcpy(arref[i], arref[k], sizeof(arref[i]));
+				memcpy(arref[k], rowi, sizeof(arref[k]));
+			} else {
+				//special case: if the entire column is zeroes, then increase the column
+				j++;
+			}
+		}
+
+		//divide entire row by leading coefficient, to get REDUCED row echelon
+		int k;
+		//could be k = j, but 0/n = 0 so
+		double d = arref[i][j];
+		for(k = 0; k < width[a]; ++k) {
+			arref[i][k] /= d;
+		}
+
+		//eliminate other elements of jth column via subtracting multiples of the current row from other rows :I
+		for(k = 0; k < height[a]; ++k) {
+			if(k == i) {
+				//skip the current row
+				continue;
+			}
+			double c = arref[k][j];
+			int l;
+			for(l = j; l < width[a]; ++l) {
+				arref[k][l] -= arref[i][l] * c;
+			}
+		}
+	}
+
+	return push_matrix(width[a], height[a], arref);
 }
