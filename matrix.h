@@ -14,5 +14,7 @@ int add_matrices(int a, int b);
 int subtract_matrices(int a, int b);
 int multiply_scalar(double k, int a);
 int rref(int a);
+int rank(int a);
+void solve_system(int ab, double solutions[]);
 
 #endif

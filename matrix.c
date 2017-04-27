@@ -56,6 +56,8 @@ void clear_matrices() {
 		free(matrix[k]);
 	}
 	free(matrix);
+	free(width);
+	free(height);
 }
 
 
@@ -180,4 +182,88 @@ int rref(int a) {
 	}
 
 	return push_matrix(width[a], height[a], arref);
+}
+
+int rank(int a) {
+	//rank = number of nonzero rows in rref form
+	int rank = 0;
+	int ar = rref(a);
+	int i, j;
+	for(i = 0; i < height[ar]; ++i) {
+		for(j = 0; j < width[ar]; ++j) {
+			if(matrix[ar][i][j] != 0) {
+				rank++;
+				break;
+			}
+		}
+	}
+	return rank;
+}
+
+//returns unique solution set, if it has one
+//otherwise sets solutions[0] to 0
+//(I would memset the whole array to 0 but there's the chance
+//that the programmer didn't allocate enough space)
+void solve_system(int ab, double solutions[]) {
+	int abr = rref(ab);
+	//int n = rank(ab);
+	int i, j;
+	//check number of solutions:
+	//if it has an inconsistent row, then it's got no solution:
+	for(i = 0; i < height[abr]; ++i) {
+		if(matrix[abr][i][width[abr]] != 0) {
+			for(j = 0; j < width[abr] - 1; ++j) {
+				//if we have a nonzero entry, then this row is safe
+				if(matrix[abr][i][j] != 0) {
+					break;
+				}
+			}
+			if(j == width[abr] - 1) {
+				printf("Matrix inconsistent.\n");
+				//memset(solutions, 0, n * sizeof(double));
+				solutions[0] = 0;
+				return;
+			}
+		}
+	}
+	//if it's got the same number of pivots (rank) as nonzero rows, 
+	//then it's got a single solution and we can continue. 
+	//otherwise, it's got infinite solutions.
+	//(this function won't do complete solutions for now)
+	if(rank(abr) != width[abr] - 1) {
+		printf("More rows than variables, infinite solutions.\n");
+		//memset(solutions, 0, n * sizeof(double));
+		solutions[0] = 0;
+		return;
+	}
+	//go upwards and rightwards through the matrix.
+	for(i = height[abr] - 1; i >= 0; --i) {
+		//keep track of which column is the pivot column for this row
+		int pivot = 0;
+		for(j = 0; j < width[abr] - 1; ++j) {
+			//keep going until we hit a nonzero 1: that's the pivot
+			if(matrix[abr][i][j] != 0) {
+				pivot = j;
+				break;
+			}
+		}
+		//if the entire row was zeroes, then move a row up
+		if(j == width[abr] - 1) {
+			break;
+		}
+		for(j = pivot; j < width[abr] - 1; ++j) {
+			//if we encounter a nonzero number,
+			//then subtract from the solution set that number * solutions[j]
+			if(matrix[abr][i][j] != 0) {
+				matrix[abr][i][width[abr] - 1] -= matrix[abr][i][j] * solutions[j];
+			}
+		}
+		//the result is simply the solution set after this operation
+		printf("Solution number %d: %g\n", i, matrix[abr][i][width[abr] - 1]);
+		solutions[i] = matrix[abr][i][width[abr] - 1];
+	}
+}
+
+int determinant(int a) {
+	return -1;	
 }

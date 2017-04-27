@@ -18,6 +18,17 @@ int main(int argc, char **argv) {
 	int dr = rref(d);
 	print_matrix(dr);
 
+	printf("rank of dr: %d\n", rank(dr));
+
+	double system[2][3] = {{1,0,3},{0,1,4}};
+	int s = push_matrix(3, 2, system);
+	print_matrix(s);
+	double solutions[2];
+	solve_system(s, solutions);
+	if(solutions[0]) {
+		printf("x: %g, y: %g\n", solutions[0], solutions[1]);
+	}
+
 	clear_matrices();
 	return 0;
 }
