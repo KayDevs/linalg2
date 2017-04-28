@@ -134,11 +134,16 @@ int rref(int a) {
 	//to speed up computation and save stack space we're gonna use a fucktonne of memcpy's for swapping, etc.
 	//instead of multiplying by elementary matrices, etc.
 
-	for(i = 0, j = 0; i < height[a]-1 && j < width[a]-1; ++i, ++j) {
+	for(i = 0, j = 0; i < height[a] && j < width[a]; ++i, ++j) {
 		//terminology: i = current row, j = LEADING column
 
 		//if leading coefficient is zero, then swap with a nonzero row
+		//(if it's not already at the bottom)
 		if(arref[i][j] == 0) {
+			//if the row is already at the bottom...
+			if(i == height[a] - 1) {
+				break;
+			}
 			int k;
 			for(k = i; k < height[a]; ++k) {
 				//if we found a row with nonzero leading coefficient, then this is the row we want to swap with.
